@@ -2,7 +2,7 @@
 ################################################################################
 
 Program		: passwd_exp
-Version		: 1.2.9
+Version		: 1.2.11
 Purpose		: Warn of password expiration via email
 		  Check acount expiration status (admin mode)
 License		: GNU GPL v2 (see file COPYING)
@@ -219,7 +219,8 @@ Requirements	: perl5.005 + Text-Tokenizer perl package,
 			String '%recipient%' is replaced by the email
 			recipient and '%subject%' is replaced by the email
 			subject. Be sure it is absolute path, else script
-			will refuse to use it.
+			will refuse to use it. Additionaly %user% variable is
+			also replaced. Other variables are ignored.
 
 	reply-to	Email of the user, that should receive replys from
 			expiration warnings mail. Default is it user running

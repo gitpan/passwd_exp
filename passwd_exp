@@ -1,7 +1,7 @@
 #! @PERL@
 # PROGRAM	: passwd_exp @VERSION@
 # PURPOSE	: warns of account expiration via email
-# AUTHOR	: Samuel Behan <samkob(at)gmail(dot)com> (c) 2000-2006
+# AUTHOR	: Samuel Behan <samkob(at)gmail(dot)com> (c) 2000-2009
 # HOMEPAGE	: http://devel.dob.sk/passwd_exp
 # LICENSE	: GNU GPL v2, NO WARRANTY VOID (see file LICENSE)
 ################################################################################
@@ -19,7 +19,7 @@ use vars qw($VERSION $AUTHOR $AUTHOR_EMAIL $AGENT $SCRIPT $BANNER);
 
 #script info
 $AUTHOR		= 'Samuel Behan';
-$AUTHOR_EMAIL	= 'samkob@gmail.com';
+$AUTHOR_EMAIL	= 'samkob(at)gmail.com';
 $VERSION	= '@VERSION@';
 $SCRIPT		= 'passwd_exp';
 $AGENT		= 'Password expiration agent';
@@ -118,7 +118,7 @@ my %t_cfg_map	= (
 	qr/^locale$/			=> q/$CONFIG{"locale"} = $opt_val if(defined($opt_val) && ($opt_val ne "auto"))/,
 	qr/^direct(\s*|_)mta$/		=> q/$CONFIG{"direct_mta"} = _isbool($opt_val);/,
 	qr/^(mail((er)|(\s*|_)sender)?)$/	=> 
-			q/ return (-1, "mailer_recp_miss") if($opt_val !~ \/\%(recp|recipient)\%\/o);
+			q/ return (-1, "mailer_recp_miss") if($opt_val !~ \/\%(recp|recipient|user)\%\/o);
 			  $CONFIG{"mailer"} = $opt_val;/,
 	qr/^module$/	=> q/$CONFIG{"module"} = $opt_val;/,
 	qr/^mod(ule)?(\s*|_)?opt(s|ion)?(\[(\w*)\])$/ =>
@@ -195,9 +195,17 @@ sub _error($;$)
 }
 
 ##
+# Print version info
+sub cmd_print_version()
+{
+	print STDOUT _("passwd_exp version")." ".$VERSION."  $AUTHOR (c) 2000-2009\n";
+	return 0;
+}
+
+##
 # Print usage help
 sub cmd_print_help(;$)
-{ 
+{
 	my $help_f	= *STDOUT;
 	my $err		= shift;
 	my $err_str	= "";
@@ -221,7 +229,7 @@ sub cmd_print_help(;$)
 		"-h"		=> "\t"._('print this help'),
 		"-d VAR=VALUE"	=> _('define variable'),
 		);
-	
+
 	if(defined($err))
 	{	$help_f	= *STDERR;
 		$err_str	= _("Error").": ".$err;
@@ -240,14 +248,6 @@ sub cmd_print_help(;$)
 	{	print $help_f "\t".$k."\t".$t_help_opts{$k}."\n";	}
 
 	exit(!defined($err));
-}
-
-##
-# Print version info
-sub cmd_print_version()
-{
-	print STDOUT _("passwd_exp version")." ".$VERSION."  $AUTHOR (c) 2000-2006\n";
-	return 0;
 }
 
 ##
@@ -325,7 +325,7 @@ sub cmd_load_cfg($)
 			if(defined($do_ret[0]) 
 				&& substr($do_ret[0], 0, 1) eq '-'
 						&& $do_ret[0] < 0)
-			{	
+			{
 				if($do_ret[0] == -1)
 				{	return _error("[$file:$line] <$opt_key> ".$t_cfg_error{$do_ret[1]}, 0);	}
 				elsif($do_ret[0] == -2)
@@ -348,7 +348,7 @@ sub cmd_load_cfg($)
 	#open cfg file
 	return _error("$SCRIPT: "._("failed opening config file")." `$file' ($!)", 0)
 		if(!open(F_CFG, $file));
-	
+
 	#setup tokenizer
 	my ($tokid);
 	$tokid	= tokenizer_new(F_CFG);
@@ -371,7 +371,7 @@ SCAN:
 		{	goto RESET if($#opt_str == -1 && !defined($opt_data));
 			push(@opt_str, $opt_data);
 			goto CONFIG;	}
-		
+
 		#divide by =
 		if($tok_type == TOK_TEXT && $tok_str =~ /^([^=]*)\s*=\s*(.*)$/o)
 		{	$opt_data .= $1;
@@ -406,7 +406,6 @@ CONFIG:
 			_configure($opt_key, $opt_val, $file, $tok_line) ||
 				return 0;
 
-	
 			#clean
 			$EXEC_CODE	= undef;
 		}
@@ -533,7 +532,7 @@ sub get_mail_data($)
 	#mail file not defined
 	return ($CONFIG{$mode.'_subject'}, $CONFIG{$mode.'_body'})
 				if(!defined($file));
-		
+
 	#eval file
 	my $found;
 	$file	= eval_vars($file, %UENV, %ENV);
@@ -627,6 +626,7 @@ sub cmd_sendmail($$$)
 		#assemble command
 		$cmd	= eval_vars($CONFIG{"mailer"}, 
 					%{ { "recipient"=> $mail_recp,
+					  "user"	=> $UENV{'user'},
 					  "subject"	=> $mail_subj,
 					  "recp"	=> \$mail_recp,
 					  "subj"	=> \$mail_subj	} },
@@ -755,7 +755,7 @@ $days		= int($TIME / 86400);
 $UENV{'data'}		= \@udata;
 $UENV{'userdata'}	= $UENV{'udata'}	= \@usdata;
 
-$CONFIG{-module}	= $CONFIG{"module"} if(!defined($CONFIG{-module}));
+$CONFIG{-module}	= $CONFIG{"module"};
 exit(_error("$SCRIPT: No data module defined (see -m argument)", 1))
 		if(!defined($CONFIG{-module}) || $CONFIG{-module} eq '');
 $CONFIG{-module}	.= ' info'
